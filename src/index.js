@@ -1,32 +1,15 @@
 const express = require('express')
 const bodyParser = require("body-parser");
 const mongoose = require('mongoose');
-const CoinGecko = require('coingecko-api');
 const fetch = require("node-fetch");
-var TronWeb = require('tronweb');
 
 const app = express();
-const port = process.env.PORT;
-
+const port = process.env.PORT || 3003;
 const token = process.env.APP_MT;
-const uri = process.env.APP_URI;
+const uri = process.env.APP_URI || "mongodb+srv://dbElSalto:x9eAYrYf100awsmA@dbelsalto.bvchh.mongodb.net/myFirstDatabase";
 
-const TRONGRID_API = process.env.APP_API;
-const proxy = process.env.APP_PROXY;
+const proxy = process.env.APP_PROXY || "https://proxy-wozx.herokuapp.com/";
 
-const contractAddress = process.env.APP_CONTRACT;
-
-console.log(TRONGRID_API);
-
-const CoinGeckoClient = new CoinGecko();
-
-TronWeb = new TronWeb(
-  TRONGRID_API,
-  TRONGRID_API,
-  TRONGRID_API
-);
-
-TronWeb.setAddress('TEf72oNbP7AxDHgmb2iFrxE2t1NJaLjTv5');
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
@@ -39,33 +22,15 @@ mongoose.connect(uri, options).then(
 );
 
 var user = mongoose.model('usuarios', {
-        wallet: String,
         id: Number,
         active: Boolean,
-        txhash: String,
-        balance: Number,
-        frozen: Number,
-        deposit: [{
-          amount: Number,
-          start: Number,
-          end: Number,
-          finalized: Boolean
-
-        }],
-        record: [{
-          amount: Number,
-          method: String,
-          date: Number,
-          done: Boolean,
-          dateSend: Number
-
-        }]
-
+        value: Number,
+        start: Number,
+        end: Number
+       
     });
 
 
-
-var usuariobuscado = 'TB7RTxBPY4eMvKjceXj8SWjVnZCrWr4XvF';
 
 app.get('/', async(req,res) => {
 
@@ -78,12 +43,7 @@ app.get('/', async(req,res) => {
 });
 
 app.get('/precio/usd/trx', async(req,res) => {
-/*
-  let data = await CoinGeckoClient.simple.price({
-      ids: ['tron'],
-      vs_currencies: ['usd']
-  });
-  //console.log(data);*/
+
 
   var apiUrl = 'https://data.gateapi.io/api2/1/marketlist';
   const response = await fetch(apiUrl)
@@ -92,7 +52,6 @@ app.get('/precio/usd/trx', async(req,res) => {
 
   var upd = json.data.find(element => element.pair == "trx_usdt");
 
-  //console.log(upd.rate);
 
   res.status(200).send({
     "data":{
@@ -136,41 +95,6 @@ app.get('/consultar/todos', async(req,res) => {
     console.log(usuario);
 
     res.send(usuario);
-
-});
-
-app.get('/consultar/ejemplo', async(req,res) => {
-
-    usuario = await user.find({ wallet: usuariobuscado }, function (err, docs) {});
-    usuario = usuario[0];
-    //console.log(usuario);
-
-    res.send(usuario);
-
-});
-
-app.get('/consultar/transaccion/:id', async(req,res) => {
-
-    let id = req.params.id;
-
-    await TronWeb.trx.getTransaction(id)
-    .then(value=>{
-    //  console.log(value.ret[0].contractRet);
-
-      if (value.ret[0].contractRet === 'SUCCESS') {
-
-        res.send({result: true});
-      }else {
-        res.send({result: false});
-      }
-    })
-    .catch(value=>{
-      console.log(value);
-      res.send({result: false});
-    })
-
-
-
 
 });
 
@@ -239,20 +163,8 @@ app.post('/registrar/:direccion', async(req,res) => {
     let id = req.body.id;
     let txhash = req.body.txhash
     let respuesta = {};
-
-    var contrato = await TronWeb.contract().at(contractAddress);
-    var decimales = await contrato.decimals().call();
-
-    var saldo = await contrato.balanceOf(cuenta).call();
-    saldo = parseInt(saldo._hex)/10**decimales;
-
-    var frozen = await contrato.balanceFrozen(cuenta).call();
-    frozen = parseInt(frozen._hex)/10**decimales;
-
-    var ids = await contrato.ids(cuenta).call();
-
   
-    if (await TronWeb.isAddress(cuenta) && token == token2) {
+    if ( token == token2 ) {
 
       usuario = await user.find({ wallet: cuenta }, function (err, docs) {});
 
@@ -265,7 +177,6 @@ app.post('/registrar/:direccion', async(req,res) => {
         }else{
 
              var users = new user({
-                wallet: cuenta,
                 id: id,
                 active: ids,
                 txhash: txhash,
